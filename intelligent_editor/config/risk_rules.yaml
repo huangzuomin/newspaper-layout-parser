@@ -1,0 +1,90 @@
+# 风险规则配置
+# Risk Rules Configuration
+
+# Issue到Risk的映射规则
+issue_mappings:
+  # Article级别issues
+  missing_headline: critical_article_risk
+  no_body_blocks: critical_article_risk
+  too_few_body_blocks: high_article_risk
+  oversized_article: low_article_risk
+
+  # Block级别issues
+  empty_block: low_block_risk
+  abnormal_font_size: medium_block_risk
+  classification_mismatch: low_block_risk
+
+  # Column级别issues
+  no_columns: critical_layout_risk
+  too_many_columns: high_layout_risk
+  narrow_column: medium_layout_risk
+  wide_column: low_layout_risk
+  column_crosses_zones: high_layout_risk
+
+  # Zone级别issues
+  zone_without_headline: medium_layout_risk
+  overpopulated_zone: low_layout_risk
+
+  # 全局级别issues
+  too_few_blocks: high_global_risk
+  too_few_articles: medium_global_risk
+  no_headlines: critical_global_risk
+  no_body_blocks_global: critical_global_risk
+  no_articles: critical_global_risk
+  label_overfire: medium_global_risk
+
+# 风险严重等级定义
+severity_rules:
+  critical:
+    threshold: 4
+    description: "会导致付印事故，必须解决"
+    requires_rejection: true
+    color: "red"
+
+  high:
+    threshold: 3
+    description: "严重影响版面质量，强烈建议修改"
+    requires_review: true
+    color: "orange"
+
+  medium:
+    threshold: 2
+    description: "明显问题，需要关注"
+    color: "yellow"
+
+  low:
+    threshold: 1
+    description: "轻微问题，可以忽略"
+    color: "gray"
+
+# 风险聚合规则
+aggregation_rules:
+  # 同类型风险聚合
+  same_type_aggregation: true
+  max_risks_per_type: 3
+
+  # 空间相邻风险聚合（同一zone内的风险）
+  spatial_aggregation: true
+  distance_threshold: 100  # 像素
+
+# 风险类型分类（用于统计）
+risk_categories:
+  article_risk:
+    - critical_article_risk
+    - high_article_risk
+    - low_article_risk
+
+  layout_risk:
+    - critical_layout_risk
+    - high_layout_risk
+    - medium_layout_risk
+    - low_layout_risk
+
+  content_risk:
+    - medium_block_risk
+    - low_block_risk
+
+  global_risk:
+    - critical_global_risk
+    - high_global_risk
+    - medium_global_risk

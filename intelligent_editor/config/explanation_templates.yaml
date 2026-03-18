@@ -1,0 +1,137 @@
+# 解释模板配置
+# Explanation Templates Configuration
+
+# 决策解释模板
+decision_templates:
+  approve:
+    short: "版面质量良好，可以付印"
+    detailed: "版面质量评估为{grade}级（{score}分），{risk_summary}。符合付印标准，建议可以付印。"
+
+  review:
+    short: "存在明显问题，建议重点审查"
+    detailed: "版面质量评估为{grade}级（{score}分），{risk_summary}。发现{high_count}个高风险问题，建议重点审查后再决定是否付印。"
+
+  reject:
+    short: "存在重大风险，不能付印"
+    detailed: "版面质量评估为{grade}级（{score}分），{risk_summary}。发现{critical_count}个重大风险，必须修改后重新提交。"
+
+# 风险等级解释模板
+risk_level_templates:
+  CRITICAL:
+    name: "重大风险"
+    description: "会导致付印事故"
+    impact: "必须立即解决，否则不能付印"
+    examples: ["政策导向问题", "标题错误", "主稿结构异常"]
+
+  HIGH:
+    name: "高风险"
+    description: "严重影响版面质量"
+    impact: "强烈建议修改，否则影响阅读体验"
+    examples: ["文章缺少headline", "分栏不合理", "版式问题"]
+
+  MEDIUM:
+    name: "中等风险"
+    description: "明显问题，需要关注"
+    impact: "建议修改，提升版面质量"
+    examples: ["body blocks过少", "字号异常", "zone结构问题"]
+
+  LOW:
+    name: "低风险"
+    description: "轻微问题，可以忽略"
+    impact: "不影响整体质量，有时间可优化"
+    examples: ["空block", "标点问题", "细微格式问题"]
+
+# 评分解释模板
+score_templates:
+  breakdown:
+    intro: "评分组成：基础分{base_score}分，风险扣分{penalty}分，加分{bonus}分"
+    penalty_detail: "风险扣分明细：CRITICAL({critical_count})×{critical_weight} + HIGH({high_count})×{high_weight} + MEDIUM({medium_count})×{medium_weight} + LOW({low_count})×{low_weight} = {total_penalty}分"
+    bonus_detail: "加分说明：{bonus_reasons}"
+
+  grade_explanations:
+    A: "优秀（90-100分）：版面质量优秀，无明显问题"
+    B: "良好（80-89分）：版面质量良好，有少量可优化项"
+    C: "中等（70-79分）：版面质量中等，存在一些明显问题"
+    D: "及格（60-69分）：版面质量勉强及格，建议修改"
+    F: "不及格（0-59分）：版面质量不合格，必须修改"
+
+  bonus_reasons:
+    no_critical: "无重大风险（+5分）"
+    no_high: "无高风险（+3分）"
+    perfect: "无任何风险（+10分）"
+
+# 问题优先级解释模板
+issue_priority_templates:
+  intro: "以下问题最需要关注："
+  reasoning: "这些问题{severity}等级较高，且{impact_reason}，因此优先处理"
+
+  severity_reasons:
+    CRITICAL: "会导致付印事故"
+    HIGH: "严重影响版面质量"
+    MEDIUM: "影响阅读体验"
+    LOW: "可优化项"
+
+  impact_reasons:
+    article_related: "直接影响文章完整性"
+    layout_related: "影响版面结构"
+    content_related: "影响内容质量"
+
+# 常见问题解释模板
+common_issue_explanations:
+  missing_headline:
+    title: "文章缺少标题"
+    explanation: "文章没有headline block，可能是article聚类时没有正确识别标题，或者标题本身缺失。"
+    impact: "严重影响文章完整性，读者无法快速了解文章主题。"
+    suggestion: "检查article聚类逻辑，确认headline是否被正确识别。"
+
+  too_few_body_blocks:
+    title: "正文blocks过少"
+    explanation: "文章只有1个body block，正文内容过少，可能是block分割时将连续正文合并为一个block。"
+    impact: "可能影响文章结构完整性，但也可能是短新闻的正常情况。"
+    suggestion: "检查block分割参数，确认是否需要调整。"
+
+  narrow_column:
+    title: "栏宽过窄"
+    explanation: "某栏宽度小于页面宽度的8%，可能导致阅读体验不佳。"
+    impact: "影响版面美观和阅读流畅度。"
+    suggestion: "调整分栏检测参数，或合并相邻的窄栏。"
+
+  empty_block:
+    title: "空文本块"
+    explanation: "block没有文本内容，可能是PDF导出时的占位符或文本提取失败。"
+    impact: "通常不影响整体质量，但可能表明PDF解析有问题。"
+    suggestion: "检查PDF源文件，确认是否为正常情况。"
+
+# 置信度解释模板
+confidence_templates:
+  high:
+    range: "80%-100%"
+    explanation: "系统对决策结果非常有信心，风险识别准确，建议采纳。"
+
+  medium:
+    range: "60%-79%"
+    explanation: "系统对决策结果有较高信心，但存在一些不确定性，建议结合人工判断。"
+
+  low:
+    range: "0%-59%"
+    explanation: "系统对决策结果信心不足，建议人工重点审查。"
+
+# 自然语言生成规则
+nl_generation_rules:
+  # 语气风格
+  tone: "专业、客观、清晰"
+
+  # 详细程度
+  verbosity:
+    short: "一句话总结（≤20字）"
+    medium: "简要说明（2-3句话）"
+    detailed: "详细解释（包含原因、影响、建议）"
+
+  # 语言
+  language: "zh-CN"  # 简体中文
+
+  # 格式
+  format:
+    use_bullet_points: true
+    use_emoji: false
+    use_numbering: true

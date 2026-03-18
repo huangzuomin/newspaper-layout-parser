@@ -3,7 +3,7 @@
 Report Generator - 生成最终报告（包括score、issues、suggestions）
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 import logging
 
 logger = logging.getLogger("parser_auditor")

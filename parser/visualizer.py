@@ -10,7 +10,7 @@ from matplotlib.axes import Axes
 from typing import List, Optional
 import logging
 
-from .schema import Block, BBox, ZoneType
+from .schema import Block, BBox, ZoneType, Article
 
 logger = logging.getLogger("parser")
 

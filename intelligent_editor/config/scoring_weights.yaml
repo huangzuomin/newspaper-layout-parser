@@ -1,0 +1,50 @@
+# 评分权重配置
+# Scoring Weights Configuration
+
+# 风险扣分权重
+risk_weights:
+  CRITICAL: 30  # 每个CRITICAL风险扣30分
+  HIGH: 15      # 每个HIGH风险扣15分
+  MEDIUM: 5     # 每个MEDIUM风险扣5分
+  LOW: 1        # 每个LOW风险扣1分
+
+# 扣分上限
+max_penalty: 50  # 最多扣50分（避免分数过低）
+
+# 加分规则（无风险奖励）
+bonus_rules:
+  # 无CRITICAL风险
+  no_critical: 5
+
+  # 无HIGH风险
+  no_high: 3
+
+  # 完美无风险
+  perfect: 10  # 无任何风险
+
+# 质量等级划分
+grade_thresholds:
+  A: 90  # 90-100分：优秀
+  B: 80  # 80-89分：良好
+  C: 70  # 70-79分：中等
+  D: 60  # 60-69分：及格
+  F: 0   # 0-59分：不及格
+
+# 评分维度权重（Phase 2扩展用）
+dimension_weights:
+  risk_based: 1.0  # 基于风险的评分（Phase 2）
+  # 未来可扩展：
+  # layout_quality: 0.2
+  # content_quality: 0.3
+  # structure_quality: 0.5
+
+# 分数调整规则
+score_adjustments:
+  # parser_auditor的基础分权重
+  base_score_weight: 0.5  # Phase 2使用50%基础分
+
+  # 风险扣分权重
+  risk_penalty_weight: 1.0  # 风险扣分全额应用
+
+  # 加分权重
+  bonus_weight: 1.0  # 加分全额应用
