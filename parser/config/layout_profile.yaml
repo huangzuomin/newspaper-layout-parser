@@ -1,0 +1,32 @@
+# Zone分区配置
+profiles:
+  default:
+    zones:
+      masthead:
+        y_max_ratio: 0.15
+        priority: 0
+
+      headline_zone:
+        y_min_ratio: 0.15
+        y_max_ratio: 0.30
+        priority: 1
+
+      left_zone:
+        y_min_ratio: 0.30
+        y_max_ratio: 0.75
+        x_max_ratio: 0.65
+        priority: 2
+
+      right_zone:
+        y_min_ratio: 0.30
+        y_max_ratio: 0.75
+        x_min_ratio: 0.65
+        priority: 3
+
+      bottom_zone:
+        y_min_ratio: 0.75
+        priority: 4
+
+    columns:
+      min_gap_ratio: 0.05  # 最小栏间距占页面宽度比例
+      max_columns: 5
