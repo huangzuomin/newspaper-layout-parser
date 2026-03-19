@@ -3,6 +3,8 @@
 Visualizer - Generate visualization images for debugging
 """
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.figure import Figure

@@ -15,3 +15,8 @@ matplotlib>=3.7.0
 
 # 配置文件处理
 PyYAML>=6.0
+
+# Service layer
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-multipart>=0.0.9
