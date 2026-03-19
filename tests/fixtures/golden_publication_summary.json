@@ -1,0 +1,8 @@
+{
+  "decision": "reject",
+  "risk_level": "HIGH",
+  "score": 40.0,
+  "grade": "F",
+  "top_issue_count": 3,
+  "optimization_count": 4
+}

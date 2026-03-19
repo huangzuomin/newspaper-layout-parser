@@ -45,6 +45,19 @@ test_output/
 auditor_test*/
 audit_results/
 *.log
+editor_results/
+editor_results_v2/
+audit_*/
+auditor_batch_output/
+parsed_*/
+test_audit_output/
+test_rewrite_*/
+test_v*_runtime*/
+test_v*_live_model/
+test_v*_page*/
+phase4_*report.json
+.claude/
+nul
 
 # Test data and snapshots (keep structure, ignore content)
 tests/snapshots/*.json
@@ -87,3 +100,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Backup files
+*.bak
+*.swp
+*.tmp

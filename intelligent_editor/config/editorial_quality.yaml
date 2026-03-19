@@ -1,0 +1,51 @@
+# Editorial Quality Engine Configuration
+
+headline_analysis:
+  max_headline_length: 20
+  ideal_headline_length: 12
+  min_headline_length: 6
+  enable_meeting_style_detection: true
+  enable_generic_word_detection: true
+  enable_weak_focus_detection: true
+
+headline_rewrite:
+  enabled: true
+  llm_config:
+    enabled: true
+    provider: "openai"
+    api_key: ""
+    api_key_env: "ARK_API_KEY"
+    model: "kimi-k2.5"
+    base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+    temperature: 0.2
+    timeout_seconds: 30
+
+lead_analysis:
+  max_lead_length: 150
+  min_lead_length: 30
+  enable_slow_start_detection: true
+  enable_abstract_detection: true
+  enable_news_value_frontloading: true
+
+packaging_analysis:
+  enable_photo_text_ratio_check: true
+  max_photo_text_ratio: 0.7
+  enable_disconnect_check: true
+  min_photo_caption_distance: 50
+  enable_visual_hierarchy_check: true
+
+homogeneity_analysis:
+  enable_government_expression_homogeneity: true
+  similarity_threshold: 0.7
+  enable_structure_homogeneity: true
+
+scoring_weights:
+  headline_weight: 0.4
+  lead_weight: 0.3
+  packaging_weight: 0.2
+  diversity_weight: 0.1
+
+impact_thresholds:
+  high_impact_score_threshold: 70
+  medium_impact_score_threshold: 85
+  low_impact_score_threshold: 100

@@ -1,9 +1,5 @@
 """
-主入口模块
-Main entry point for the PDF parser CLI
-
-Usage:
-    python -m parser.main "path/to/pdf.pdf" --output-dir output --log-level INFO
+Main entry point for the PDF parser CLI.
 """
 
 import argparse
@@ -12,147 +8,104 @@ import logging
 import logging.config
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, List, Optional, Tuple
 
 import yaml
 
-from .pdf_loader import PDFLoader
-from .block_extractor import BlockExtractor
-from .visualizer import Visualizer
-from .font_analyzer import FontAnalyzer
-from .zone_segmenter import ZoneSegmenter
-from .block_classifier import BlockClassifier
-from .column_detector import ColumnDetector
 from .article_builder import ArticleBuilder
+from .block_classifier import BlockClassifier
+from .block_extractor import BlockExtractor
+from .column_detector import ColumnDetector
+from .font_analyzer import FontAnalyzer
+from .pdf_loader import PDFLoader
 from .reading_order import ReadingOrderBuilder
 from .schema import PageResult
+from .visualizer import Visualizer
+from .zone_segmenter import ZoneSegmenter
 
-# 加载日志配置
-def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
-    """
-    设置日志系统
 
-    Args:
-        log_level: 日志级别 (DEBUG, INFO, WARNING, ERROR)
-        log_file: 日志文件路径（可选）
-    """
-    # 读取日志配置
+def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None) -> None:
+    """Configure parser logging."""
     config_path = Path(__file__).parent / "config" / "logging.yaml"
 
     if config_path.exists():
-        with open(config_path, "r", encoding="utf-8") as f:
-            log_config = yaml.safe_load(f)
+        with open(config_path, "r", encoding="utf-8") as handle:
+            log_config = yaml.safe_load(handle)
 
-        # 更新日志级别
         log_config["loggers"]["parser"]["level"] = log_level
         log_config["handlers"]["console"]["level"] = log_level
 
-        # 更新日志文件路径
         if log_file:
             log_config["handlers"]["file"]["filename"] = log_file
 
         logging.config.dictConfig(log_config)
-    else:
-        # 降级到基本配置
-        logging.basicConfig(
-            level=getattr(logging, log_level.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
+        return
+
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
 
-def parse_pdf(
-    pdf_path: str,
-    output_dir: str,
-    log_level: str = "INFO",
+def parse_page_range(page_range: str, page_count: int) -> List[int]:
+    """Parse a page range string into zero-based page indexes."""
+    if not page_range or page_range.lower() == "all":
+        return list(range(page_count))
+
+    if "-" in page_range:
+        start_text, end_text = page_range.split("-", 1)
+        start = int(start_text)
+        end = int(end_text)
+        if start < 1 or end < start or end > page_count:
+            raise ValueError(f"Invalid page range: {page_range}")
+        return list(range(start - 1, end))
+
+    page_no = int(page_range)
+    if page_no < 1 or page_no > page_count:
+        raise ValueError(f"Invalid page number: {page_range}")
+    return [page_no - 1]
+
+
+def _prepare_output_dirs(output_path: Path) -> None:
+    for name in ("json", "overlays", "snapshots", "logs"):
+        (output_path / name).mkdir(parents=True, exist_ok=True)
+
+
+def _parse_single_page(
+    loader: PDFLoader,
+    page_no: int,
+    extractor: BlockExtractor,
 ) -> PageResult:
-    """
-    解析PDF文件
-
-    Args:
-        pdf_path: PDF文件路径
-        output_dir: 输出目录
-        log_level: 日志级别
-
-    Returns:
-        PageResult对象
-    """
     logger = logging.getLogger("parser")
 
-    # 创建输出目录
-    output_path = Path(output_dir)
-    (output_path / "json").mkdir(parents=True, exist_ok=True)
-    (output_path / "overlays").mkdir(parents=True, exist_ok=True)
-    (output_path / "snapshots").mkdir(parents=True, exist_ok=True)
-    (output_path / "logs").mkdir(parents=True, exist_ok=True)
-
-    logger.info(f"Processing PDF: {pdf_path}")
-    logger.info(f"Output directory: {output_dir}")
-
-    # 初始化组件
-    loader = PDFLoader(pdf_path)
-    extractor = BlockExtractor()
-    visualizer = Visualizer()
-
-    # 获取页数
-    page_count = loader.page_count
-    logger.info(f"PDF has {page_count} pages")
-
-    # 目前只处理第一页（里程碑1）
-    page_no = 0
-    logger.info(f"Processing page {page_no + 1}/{page_count}")
-
-    # 加载页面
     page = loader.load_page(page_no)
     page_width, page_height = loader.get_page_dimensions(page_no)
-    logger.info(f"Page size: {page_width:.0f} x {page_height:.0f} points")
+    logger.info("Processing page %s (%sx%s)", page_no + 1, int(page_width), int(page_height))
 
-    # 提取blocks
     blocks = extractor.extract_blocks(page, page_no)
-
-    # 过滤小blocks
     blocks = extractor.filter_blocks(blocks, min_chars=3)
-    logger.info(f"Filtered to {len(blocks)} blocks")
 
-    # ===== 里程碑2：结构分析 =====
-
-    # 1. 字体分析
     font_analyzer = FontAnalyzer()
     font_profile = font_analyzer.analyze(blocks)
-    logger.info("Font analysis completed")
 
-    # 2. 区域分区
     zone_segmenter = ZoneSegmenter()
     blocks = zone_segmenter.segment(blocks, page_width, page_height)
-    logger.info("Zone segmentation completed")
 
-    # 3. Block候选分类（第一阶段）
     classifier = BlockClassifier()
     blocks = classifier.classify_candidates(blocks, font_profile)
-    logger.info("Candidate classification completed")
 
-    # 4. 分栏检测
     column_detector = ColumnDetector()
     blocks = column_detector.detect(blocks)
-    logger.info("Column detection completed")
 
-    # ===== 里程碑3：文章分析 =====
-
-    # 5. Block最终分类（第二阶段）
     blocks = classifier.finalize_classification(blocks)
-    logger.info("Final classification completed")
 
-    # 6. 文章聚类
     article_builder = ArticleBuilder()
     articles = article_builder.build(blocks)
-    logger.info(f"Article clustering completed: {len(articles)} articles")
 
-    # 7. 阅读顺序构建
     reading_order_builder = ReadingOrderBuilder()
     block_order, article_order = reading_order_builder.build(blocks, articles)
-    logger.info("Reading order completed")
 
-    # 创建PageResult
-    result = PageResult(
+    return PageResult(
         page_no=page_no + 1,
         width=page_width,
         height=page_height,
@@ -160,38 +113,79 @@ def parse_pdf(
         articles=articles,
         block_reading_order=block_order,
         article_reading_order=article_order,
-        font_profile=font_profile,  # 保存字体配置
+        font_profile=font_profile,
     )
 
-    # 关闭PDF
-    loader.close()
 
-    # 保存中间产物
-    _save_intermediate_results(result, output_path, page_no + 1)
-
-    logger.info("PDF parsing completed")
-    return result
-
-
-def _save_intermediate_results(result: PageResult, output_path: Path, page_no: int):
-    """
-    保存中间产物
-
-    Args:
-        result: PageResult对象
-        output_path: 输出目录Path对象
-        page_no: 页码
-    """
+def parse_pdf(
+    pdf_path: str,
+    output_dir: str,
+    log_level: str = "INFO",
+    page_range: str = "all",
+) -> dict:
+    """Parse a PDF file into page-level structured results."""
     logger = logging.getLogger("parser")
+    output_path = Path(output_dir)
+    _prepare_output_dirs(output_path)
 
-    # 1. 保存raw_blocks.json
+    logger.info("Processing PDF: %s", pdf_path)
+    logger.info("Output directory: %s", output_dir)
+
+    loader = PDFLoader(pdf_path)
+    extractor = BlockExtractor()
+
+    try:
+        page_indexes = parse_page_range(page_range, loader.page_count)
+        logger.info("Selected pages: %s", ", ".join(str(i + 1) for i in page_indexes))
+
+        pages: List[PageResult] = []
+        for page_index in page_indexes:
+            result = _parse_single_page(loader, page_index, extractor)
+            pages.append(result)
+            _save_intermediate_results(result, output_path)
+
+        aggregated = {
+            "pages": [page.to_dict() for page in pages],
+            "total_pages": loader.page_count,
+            "processed_pages": len(pages),
+            "pdf_path": pdf_path,
+            "page_range": page_range,
+        }
+
+        parsed_result_path = output_path / "json" / "parsed_result.json"
+        with open(parsed_result_path, "w", encoding="utf-8") as handle:
+            json.dump(aggregated, handle, ensure_ascii=False, indent=2)
+        logger.info("Saved aggregated result: %s", parsed_result_path)
+
+        return aggregated
+    finally:
+        loader.close()
+
+
+def _save_intermediate_results(result: PageResult, output_path: Path) -> None:
+    """Persist per-page artifacts."""
+    logger = logging.getLogger("parser")
+    page_no = result.page_no
+
+    raw_blocks_payload = {
+        "page_no": result.page_no,
+        "width": result.width,
+        "height": result.height,
+        "blocks": [block.to_dict() for block in result.blocks],
+    }
+
     raw_blocks_path = output_path / "json" / f"page_{page_no}_raw_blocks.json"
-    with open(raw_blocks_path, "w", encoding="utf-8") as f:
-        json.dump(result.to_dict(), f, ensure_ascii=False, indent=2)
-    logger.info(f"Saved raw blocks: {raw_blocks_path}")
+    with open(raw_blocks_path, "w", encoding="utf-8") as handle:
+        json.dump(raw_blocks_payload, handle, ensure_ascii=False, indent=2)
+    logger.info("Saved raw blocks: %s", raw_blocks_path)
 
-    # 2. 生成page_N_raw.png可视化
+    structured_path = output_path / "json" / f"page_{page_no}_structured.json"
+    with open(structured_path, "w", encoding="utf-8") as handle:
+        json.dump(result.to_dict(), handle, ensure_ascii=False, indent=2)
+    logger.info("Saved structured data: %s", structured_path)
+
     visualizer = Visualizer()
+
     raw_overlay_path = output_path / "overlays" / f"page_{page_no}_raw.png"
     visualizer.visualize_raw_blocks(
         result.blocks,
@@ -201,15 +195,8 @@ def _save_intermediate_results(result: PageResult, output_path: Path, page_no: i
         show_block_ids=True,
         show_font_sizes=True,
     )
-    logger.info(f"Saved raw visualization: {raw_overlay_path}")
+    logger.info("Saved raw visualization: %s", raw_overlay_path)
 
-    # 3. 生成structured.json
-    structured_path = output_path / "json" / f"page_{page_no}_structured.json"
-    with open(structured_path, "w", encoding="utf-8") as f:
-        json.dump(result.to_dict(), f, ensure_ascii=False, indent=2)
-    logger.info(f"Saved structured data: {structured_path}")
-
-    # 4. 生成page_N_structure.png可视化（里程碑2）
     structure_overlay_path = output_path / "overlays" / f"page_{page_no}_structure.png"
     visualizer.visualize_structure(
         result.blocks,
@@ -220,9 +207,8 @@ def _save_intermediate_results(result: PageResult, output_path: Path, page_no: i
         show_columns=True,
         show_block_types=True,
     )
-    logger.info(f"Saved structure visualization: {structure_overlay_path}")
+    logger.info("Saved structure visualization: %s", structure_overlay_path)
 
-    # 5. 生成page_N_articles.png可视化（里程碑3）
     if result.articles:
         articles_overlay_path = output_path / "overlays" / f"page_{page_no}_articles.png"
         visualizer.visualize_articles(
@@ -237,87 +223,73 @@ def _save_intermediate_results(result: PageResult, output_path: Path, page_no: i
             block_order=result.block_reading_order,
             article_order=result.article_reading_order,
         )
-        logger.info(f"Saved articles visualization: {articles_overlay_path}")
+        logger.info("Saved articles visualization: %s", articles_overlay_path)
 
-    # 4. 生成调试报告
     from .debug_report import DebugReporter
+
     debug_report_path = output_path / "logs" / f"page_{page_no}_debug_report.txt"
     reporter = DebugReporter(result.to_dict(), result.width, result.height)
     reporter.generate_report(str(debug_report_path))
-    logger.info(f"Generated debug report: {debug_report_path}")
+    logger.info("Generated debug report: %s", debug_report_path)
 
 
-def main():
-    """CLI主函数"""
-    parser = argparse.ArgumentParser(
-        description="报纸大样PDF解析系统 - Newspaper Layout PDF Parser",
+def main() -> int:
+    """CLI entry point."""
+    cli = argparse.ArgumentParser(
+        description="Newspaper Layout PDF Parser",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-示例:
-    python -m parser.main "版面解析/B2026-03-18要闻一版01.pdf" --output-dir output
-    python -m parser.main "test.pdf" --output-dir output --log-level DEBUG
-        """,
     )
-
-    parser.add_argument(
-        "pdf_path",
-        help="PDF文件路径",
-    )
-
-    parser.add_argument(
-        "--output-dir",
-        "-o",
-        default="output",
-        help="输出目录（默认：output）",
-    )
-
-    parser.add_argument(
+    cli.add_argument("pdf_path", help="Path to the PDF file")
+    cli.add_argument("--output-dir", "-o", default="output", help="Output directory")
+    cli.add_argument(
         "--log-level",
         "-l",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="日志级别（默认：INFO）",
+        help="Log level",
     )
-
-    parser.add_argument(
-        "--version",
-        "-v",
-        action="version",
-        version="%(prog)s 0.4.0",
+    cli.add_argument(
+        "--page-range",
+        default="all",
+        help='Pages to process, e.g. "all", "1", or "1-3"',
     )
+    cli.add_argument("--version", "-v", action="version", version="%(prog)s 0.4.0")
+    args = cli.parse_args()
 
-    args = parser.parse_args()
-
-    # 创建输出目录（在设置日志之前）
     output_path = Path(args.output_dir)
     (output_path / "logs").mkdir(parents=True, exist_ok=True)
 
-    # 设置日志
     log_file = output_path / "logs" / "parser.log"
     setup_logging(args.log_level, str(log_file))
 
     logger = logging.getLogger("parser")
     logger.info("=" * 60)
-    logger.info("Newspaper Layout PDF Parser v0.4.0 (Milestone 4)")
+    logger.info("Newspaper Layout PDF Parser v0.4.0")
     logger.info("=" * 60)
 
     try:
-        # 解析PDF
-        result = parse_pdf(args.pdf_path, args.output_dir, args.log_level)
+        result = parse_pdf(
+            args.pdf_path,
+            args.output_dir,
+            args.log_level,
+            page_range=args.page_range,
+        )
 
-        # 输出统计信息
-        logger.info(f"[OK] Successfully parsed {len(result.blocks)} blocks")
-        logger.info(f"[OK] Articles: {len(result.articles)}")
-        logger.info(f"[OK] Font analysis: method={result.font_profile.get('method', 'unknown')}")
-        logger.info(f"[OK] Output saved to: {args.output_dir}")
-
+        total_blocks = sum(len(page["blocks"]) for page in result["pages"])
+        total_articles = sum(len(page["articles"]) for page in result["pages"])
+        logger.info("[OK] Successfully parsed %s pages", result["processed_pages"])
+        logger.info("[OK] Blocks: %s", total_blocks)
+        logger.info("[OK] Articles: %s", total_articles)
+        logger.info("[OK] Output saved to: %s", args.output_dir)
         return 0
-
-    except FileNotFoundError as e:
-        logger.error(f"File not found: {e}")
+    except FileNotFoundError as exc:
+        logger.error("File not found: %s", exc)
         return 1
-    except Exception as e:
-        logger.exception(f"Error parsing PDF: {e}")
+    except ValueError as exc:
+        logger.error("Invalid input: %s", exc)
+        return 1
+    except Exception as exc:
+        logger.exception("Error parsing PDF: %s", exc)
         return 1
 
 

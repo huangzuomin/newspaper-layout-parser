@@ -1,0 +1,26 @@
+[
+  {
+    "id": "page_1_manual_review",
+    "input_json": "output/json/page_1_structured.json",
+    "expected_recommendation": "reject",
+    "expected_risk_level": "HIGH",
+    "requires_manual_review": true,
+    "expected_keyword_groups": [
+      ["导向", "政治表达"],
+      ["人工/模型复核", "requires_manual_review"]
+    ],
+    "minimum_findings": 4
+  },
+  {
+    "id": "example_result_manual_review",
+    "input_json": "output/json/example_result.json",
+    "expected_recommendation": "reject",
+    "expected_risk_level": "HIGH",
+    "requires_manual_review": true,
+    "expected_keyword_groups": [
+      ["导向", "政治表达"],
+      ["人工/模型复核", "requires_manual_review"]
+    ],
+    "minimum_findings": 4
+  }
+]

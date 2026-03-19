@@ -1,0 +1,10 @@
+optimization_generation:
+  enabled: true
+  provider: "openai"
+  api_key: ""
+  api_key_env: "ARK_API_KEY"
+  model: "kimi-k2.5"
+  timeout_seconds: 30
+  temperature: 0.2
+  base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+  max_options_per_task: 3

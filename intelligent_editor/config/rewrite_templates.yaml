@@ -1,0 +1,295 @@
+# 标题重写模板库
+# Headline Rewrite Templates
+
+# ═══════════════════════════════════════════════════════════
+# 会议体标题重写规则
+# ═══════════════════════════════════════════════════════════
+
+meeting_style_rewrites:
+  # 删除"会议召开"
+  - pattern: "会议召开"
+    replacement: ""
+    description: "删除会议召开，直接陈述动作"
+    examples:
+      - from: "市政府党组会议召开学习贯彻"
+        to: "市政府党组学习贯彻"
+      - from: "市委常委会会议召开研究部署"
+        to: "市委常委会研究部署"
+
+  # 删除"会议研究部署"
+  - pattern: "会议研究部署"
+    replacement: "研究部署"
+    description: "简化会议表述"
+    examples:
+      - from: "市政府常务会议研究部署"
+        to: "市政府研究部署"
+
+  # 删除"会议强调"
+  - pattern: "会议强调"
+    replacement: ""
+    description: "删除会议强调，直接陈述内容"
+    examples:
+      - from: "会议强调要切实做好"
+        to: "切实做好"
+
+  # 删除"会议指出"
+  - pattern: "会议指出"
+    replacement: ""
+    description: "删除会议指出，直接陈述内容"
+    examples:
+      - from: "会议指出当前形势"
+        to: "当前形势"
+
+  # 删除"会议认为"
+  - pattern: "会议认为"
+    replacement: ""
+    description: "删除会议认为，直接陈述判断"
+    examples:
+      - from: "会议认为有必要"
+        to: "有必要"
+
+# ═══════════════════════════════════════════════════════════
+# 虚词删除规则
+# ═══════════════════════════════════════════════════════════
+
+generic_word_removal:
+  # 程序化虚词
+  - word: "进一步"
+    priority: 1
+    description: "删除'进一步'等虚词"
+    examples:
+      - from: "进一步加强"
+        to: "加强"
+      - from: "进一步推进"
+        to: "推进"
+
+  - word: "切实"
+    priority: 1
+    description: "删除'切实'等虚词"
+    examples:
+      - from: "切实加强"
+        to: "加强"
+      - from: "切实做好"
+        to: "做好"
+
+  - word: "扎实"
+    priority: 1
+    description: "删除'扎实'等虚词"
+    examples:
+      - from: "扎实推进"
+        to: "推进"
+      - from: "扎实开展"
+        to: "开展"
+
+  - word: "全面"
+    priority: 2
+    description: "谨慎删除'全面'，可能需要保留"
+    examples:
+      - from: "全面加强"
+        to: "加强"
+
+  - word: "深入"
+    priority: 2
+    description: "谨慎删除'深入'，可能需要保留"
+    examples:
+      - from: "深入贯彻"
+        to: "贯彻"
+
+# ═══════════════════════════════════════════════════════════
+# 稳健型标题模板
+# ═══════════════════════════════════════════════════════════
+
+conservative_templates:
+  # 会议新闻
+  - template: "{actor}{action}{target}"
+    description: "主体+动作+对象"
+    examples:
+      - actor: "市政府党组"
+        action: "学习贯彻"
+        target: "习近平总书记重要文章精神"
+        result: "市政府党组学习贯彻习近平总书记重要文章精神"
+
+  # 政务活动
+  - template: "{actor}{action}{work}"
+    description: "主体+动作+工作"
+    examples:
+      - actor: "市人大常委会"
+        action: "部署"
+        work: "人大相关工作"
+        result: "市人大常委会部署人大相关工作"
+
+  # 成果导向
+  - template: "{focus}{result}"
+    description: "聚焦点+结果"
+    examples:
+      - focus: "改革落地"
+        result: "增进民生福祉"
+        output: "改革落地增进民生福祉"
+
+# ═══════════════════════════════════════════════════════════
+# 聚焦型标题模板
+# ═══════════════════════════════════════════════════════════
+
+focused_templates:
+  # 动作+对象
+  - template: "{action}{object}"
+    description: "突出动作和对象"
+    examples:
+      - action: "部署"
+        object: "政府系统担当作为工作"
+        result: "部署政府系统担当作为工作"
+
+  - template: "推进{focus}"
+    description: "突出推进重点"
+    examples:
+      - focus: "民生实事"
+        result: "推进民生实事"
+
+  - template: "落实{task}"
+    description: "突出落实任务"
+    examples:
+      - task: "食品药品安全工作"
+        result: "落实食品药品安全工作"
+
+  # 对象+成效
+  - template: "{target}{achievement}"
+    description: "突出对象和成效"
+    examples:
+      - target: "改革"
+        achievement: "取得新进展"
+        result: "改革取得新进展"
+
+# ═══════════════════════════════════════════════════════════
+# 民生导向型标题模板
+# ═══════════════════════════════════════════════════════════
+
+people_oriented_templates:
+  # 群众获得感
+  - template: "让{achievement}更好惠及群众"
+    description: "强调群众获得感"
+    examples:
+      - achievement: "改革成果"
+        result: "让改革成果更好惠及群众"
+
+  - template: "{focus}增进民生福祉"
+    description: "突出民生福祉"
+    examples:
+      - focus: "改革实效"
+        result: "改革实效增进民生福祉"
+
+  # 民生改善
+  - template: "提升{quality}"
+    description: "突出质量提升"
+    examples:
+      - quality: "群众生活质量"
+        result: "提升群众生活质量"
+
+  # 民生实事
+  - template: "{action}民生实事"
+    description: "突出民生实事"
+    examples:
+      - action: "办好"
+        result: "办好民生实事"
+
+# ═══════════════════════════════════════════════════════════
+# 长度控制规则
+# ═══════════════════════════════════════════════════════════
+
+length_control:
+  max_headline_length: 20
+  min_headline_length: 6
+
+  # 长度控制优先级
+  priority_removal:
+    - pattern_type: "meeting_opening"
+      patterns: ["会议召开", "会议研究部署"]
+      priority: 1
+
+    - pattern_type: "generic_words"
+      patterns: ["进一步", "切实", "扎实", "全面"]
+      priority: 2
+
+    - pattern_type: "redundant_words"
+      patterns: ["相关工作", "有关工作"]
+      priority: 3
+
+# ═══════════════════════════════════════════════════════════
+# 风险控制规则
+# ═══════════════════════════════════════════════════════════
+
+risk_control:
+  # 禁止生成的表达
+  forbidden_expressions:
+    - "震惊"
+    - "重磅"
+    - "最强"
+    - "必看"
+    - "曝光"
+    - "揭秘"
+    - "内部消息"
+    - "独家"
+
+  # 需要谨慎的表达
+  cautious_expressions:
+    - "突破"
+    - "首创"
+    - "领先"
+    - "第一"
+
+  # 安全表达
+  safe_expressions:
+    - "推进"
+    - "加强"
+    - "深化"
+    - "提升"
+    - "改善"
+    - "优化"
+
+# ═══════════════════════════════════════════════════════════
+# 风格映射规则
+# ═══════════════════════════════════════════════════════════
+
+style_mapping:
+  conservative:
+    risk_level: "safe"
+    confidence_base: 0.85
+    max_variations: 0.2
+
+  focused:
+    risk_level: "usable_with_review"
+    confidence_base: 0.75
+    max_variations: 0.5
+
+  people_oriented:
+    risk_level: "usable_with_review"
+    confidence_base: 0.70
+    max_variations: 0.7
+
+# ═══════════════════════════════════════════════════════════
+# 场景适配规则
+# ═══════════════════════════════════════════════════════════
+
+scenario_adaptation:
+  # 严肃政务新闻
+  serious_government:
+    allowed_styles: ["conservative", "focused"]
+    preferred_style: "conservative"
+    avoid_people_oriented: true
+
+  # 民生新闻
+  people_news:
+    allowed_styles: ["conservative", "focused", "people_oriented"]
+    preferred_style: "focused"
+    avoid_people_oriented: false
+
+  # 会议新闻
+  meeting_news:
+    allowed_styles: ["conservative"]
+    preferred_style: "conservative"
+    avoid_people_oriented: true
+
+  # 成果展示
+  achievement_showcase:
+    allowed_styles: ["conservative", "focused", "people_oriented"]
+    preferred_style: "people_oriented"
+    avoid_people_oriented: false

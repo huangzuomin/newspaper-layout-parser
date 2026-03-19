@@ -11,6 +11,32 @@ from .optimization import (
     OptimizationCategory,
     OptimizationPriority
 )
+from .editorial_quality import (
+    ImprovementTarget,
+    HeadlineIssueType,
+    LeadIssueType,
+    PackagingIssueType,
+    ImpactLevel,
+    HeadlineSuggestion,
+    LeadSuggestion,
+    PackagingSuggestion,
+    HomogeneitySuggestion,
+    ImprovementSuggestion,
+    EditorialQualityAssessment,
+    QualityImprovementReport,
+    PublicationDecision,
+    DualChannelReport
+)
+from .executive_report import (
+    EngineeringBaselineFinding,
+    EngineeringBaselineReport,
+    SafetyFinding,
+    SafetyReport,
+    OptimizationOption,
+    OptimizationTask,
+    OptimizationReport,
+    ExecutiveAuditReport,
+)
 
 __all__ = [
     "Risk",
@@ -22,4 +48,26 @@ __all__ = [
     "OptimizationReport",
     "OptimizationCategory",
     "OptimizationPriority",
+    "ImprovementTarget",
+    "HeadlineIssueType",
+    "LeadIssueType",
+    "PackagingIssueType",
+    "ImpactLevel",
+    "HeadlineSuggestion",
+    "LeadSuggestion",
+    "PackagingSuggestion",
+    "HomogeneitySuggestion",
+    "ImprovementSuggestion",
+    "EditorialQualityAssessment",
+    "QualityImprovementReport",
+    "PublicationDecision",
+    "DualChannelReport",
+    "EngineeringBaselineFinding",
+    "EngineeringBaselineReport",
+    "SafetyFinding",
+    "SafetyReport",
+    "OptimizationOption",
+    "OptimizationTask",
+    "OptimizationReport",
+    "ExecutiveAuditReport",
 ]

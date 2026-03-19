@@ -1,0 +1,24 @@
+[
+  {
+    "id": "page_1_exec_tasks",
+    "input_json": "output/json/page_1_structured.json",
+    "expected_task_types": ["headline", "lead", "packaging"],
+    "minimum_task_count": 3,
+    "minimum_options_per_task": {
+      "headline": 1,
+      "lead": 2,
+      "packaging": 1
+    }
+  },
+  {
+    "id": "example_result_exec_tasks",
+    "input_json": "output/json/example_result.json",
+    "expected_task_types": ["headline", "lead", "packaging"],
+    "minimum_task_count": 3,
+    "minimum_options_per_task": {
+      "headline": 1,
+      "lead": 2,
+      "packaging": 1
+    }
+  }
+]

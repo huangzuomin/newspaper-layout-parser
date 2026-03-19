@@ -1,390 +1,198 @@
 """
-风险识别引擎
-Risk Engine - 将issues/anomalies转化为risks
+Risk engine for converting parser auditor issues and anomalies into normalized risks.
 """
 
-from typing import List, Dict, Any
-from collections import defaultdict
+from __future__ import annotations
+
 import logging
+from collections import defaultdict
+from typing import Any, Dict, List
 
 from ..models.risk import Risk, Severity
-from ..utils.config_loader import ConfigLoader
 
 logger = logging.getLogger("intelligent_editor")
 
 
 class RiskEngine:
-    """
-    风险识别引擎
-
-    将parser_auditor的issues/anomalies转化为risks，
-    关注影响而非错误本身。
-    """
+    """Convert parser_auditor outputs into normalized risks."""
 
     def __init__(self, risk_config: Dict[str, Any]):
-        """
-        初始化风险引擎
-
-        Args:
-            risk_config: 从risk_rules.yaml加载的配置
-        """
         self.risk_config = risk_config
-        self.issue_mappings = risk_config.get('issue_mappings', {})
-        self.severity_rules = risk_config.get('severity_rules', {})
-        self.aggregation_rules = risk_config.get('aggregation_rules', {})
-
+        self.issue_mappings = risk_config.get("issue_mappings", {})
+        self.severity_rules = risk_config.get("severity_rules", {})
+        self.aggregation_rules = risk_config.get("aggregation_rules", {})
+        self._risk_counter = 0
         logger.info("RiskEngine initialized")
 
     def identify_risks(
         self,
         issues: List[Dict],
         anomalies: Dict[str, List[Dict]],
-        metrics: Dict
+        metrics: Dict,
     ) -> List[Risk]:
-        """
-        识别所有风险
+        del metrics  # Reserved for future derived risk logic.
 
-        Args:
-            issues: HeuristicsChecker的输出
-            anomalies: AnomalyDetector的输出
-            metrics: MetricsCalculator的输出
+        self._risk_counter = 0
+        risks: List[Risk] = []
 
-        Returns:
-            Risk对象列表，按severity排序
-        """
-        risks = []
-
-        # 1. 从issues转化risks
         risks_from_issues = self._convert_issues_to_risks(issues)
         risks.extend(risks_from_issues)
-        logger.info(f"Converted {len(risks_from_issues)} issues to risks")
+        logger.info("Converted %s issues to risks", len(risks_from_issues))
 
-        # 2. 从anomalies转化risks
         risks_from_anomalies = self._convert_anomalies_to_risks(anomalies)
         risks.extend(risks_from_anomalies)
-        logger.info(f"Converted {len(risks_from_anomalies)} anomalies to risks")
+        logger.info("Converted %s anomalies to risks", len(risks_from_anomalies))
 
-        # 3. 从metrics推导risks（隐藏风险）- Phase 2暂不实现
-        # risks_from_metrics = self._derive_risks_from_metrics(metrics)
-        # risks.extend(risks_from_metrics)
-
-        # 4. 风险聚合和去重
-        if self.aggregation_rules.get('same_type_aggregation', False):
+        if self.aggregation_rules.get("same_type_aggregation", False):
             risks = self._aggregate_risks(risks)
 
-        # 5. 按severity排序（从高到低）
-        risks.sort(key=lambda r: r.severity_score, reverse=True)
-
-        logger.info(f"Total risks identified: {len(risks)}")
+        risks.sort(key=lambda risk: risk.severity_score, reverse=True)
+        logger.info("Total risks identified: %s", len(risks))
         return risks
+
+    def _next_risk_id(self) -> str:
+        risk_id = f"risk_{self._risk_counter}"
+        self._risk_counter += 1
+        return risk_id
 
     def _convert_issues_to_risks(self, issues: List[Dict]) -> List[Risk]:
-        """
-        将issues转化为risks
-
-        Args:
-            issues: HeuristicsChecker的输出
-
-        Returns:
-            Risk对象列表
-        """
         risks = []
-
         for issue in issues:
-            # 映射：issue_type → risk_type
-            issue_type = issue.get('type', 'unknown')
-            risk_type = self.issue_mappings.get(
-                issue_type,
-                f'{issue_type}_risk'
-            )
-
-            # 计算风险等级
-            severity = self._calculate_risk_severity_from_issue(issue)
-
-            # 提取受影响的元素
-            affected_elements = self._extract_affected_elements(issue)
-
-            # 生成影响说明
-            impact = self._generate_impact_description(risk_type, severity)
-
-            # 生成修复建议
-            fix_suggestion = self._generate_fix_suggestion(issue_type, issue)
-
-            # 创建Risk对象
+            issue_type = issue.get("type", "unknown")
+            risk_type = self._normalize_risk_type(issue_type)
+            severity = self._calculate_risk_severity(issue.get("severity", "low"))
             risk = Risk(
-                id=f"risk_{len(risks)}",
+                id=self._next_risk_id(),
                 type=risk_type,
                 severity=severity,
-                source='issue',
-                description=issue.get('reason', ''),
-                affected_elements=affected_elements,
-                impact=impact,
-                confidence=1.0,  # Phase 1使用固定置信度
+                source="issue",
+                description=issue.get("reason", ""),
+                affected_elements=self._extract_affected_elements(issue),
+                impact=self._generate_impact_description(severity),
+                confidence=1.0,
                 is_fixable=self._is_fixable(issue_type),
-                fix_suggestion=fix_suggestion,
+                fix_suggestion=self._generate_fix_suggestion(issue_type),
                 source_issue=issue,
                 metadata={
-                    'original_issue_type': issue_type,
-                    'issue_severity': issue.get('severity', 'low'),
-                }
+                    "original_issue_type": issue_type,
+                    "issue_severity": issue.get("severity", "low"),
+                },
             )
-
             risks.append(risk)
-
         return risks
 
-    def _calculate_risk_severity_from_issue(self, issue: Dict) -> Severity:
-        """
-        从issue计算风险等级
+    def _convert_anomalies_to_risks(self, anomalies: Dict[str, List[Dict]]) -> List[Risk]:
+        risks = []
+        for category, anomaly_list in anomalies.items():
+            for anomaly in anomaly_list:
+                anomaly_type = anomaly.get("type", "unknown")
+                risk_type = self._normalize_risk_type(anomaly_type, category)
+                severity = self._calculate_risk_severity(anomaly.get("severity", "low"))
+                risk = Risk(
+                    id=self._next_risk_id(),
+                    type=risk_type,
+                    severity=severity,
+                    source="anomaly",
+                    description=anomaly.get("reason", ""),
+                    affected_elements=self._extract_affected_elements(anomaly),
+                    impact=self._generate_impact_description(severity),
+                    confidence=1.0,
+                    is_fixable=False,
+                    fix_suggestion=self._generate_fix_suggestion_from_anomaly(anomaly_type),
+                    source_anomaly=anomaly,
+                    metadata={
+                        "original_anomaly_type": anomaly_type,
+                        "anomaly_category": category,
+                        "anomaly_severity": anomaly.get("severity", "low"),
+                    },
+                )
+                risks.append(risk)
+        return risks
 
-        Args:
-            issue: issue字典
+    def _normalize_risk_type(self, source_type: str, category: str | None = None) -> str:
+        if source_type in self.issue_mappings:
+            return self.issue_mappings[source_type]
 
-        Returns:
-            Severity枚举值
-        """
-        issue_severity = issue.get('severity', 'low')
+        if source_type.endswith("_risk"):
+            return source_type
 
-        # 映射：issue severity → risk severity
-        # 保守映射：提升低严重度issue的风险等级
-        severity_mapping = {
-            'critical': Severity.CRITICAL,
-            'high': Severity.HIGH,
-            'medium': Severity.MEDIUM,
-            'low': Severity.LOW,
+        aliases = {
+            "article_without_headline": "critical_article_risk",
+            "article_with_single_body_block": "high_article_risk",
+            "oversized_article": "low_article_risk",
+            "abnormal_column_count": "high_layout_risk",
+            "extremely_narrow_column": "medium_layout_risk",
+            "column_crosses_zones": "high_layout_risk",
+            "section_label_overfire": "medium_global_risk",
+            "empty_text_block": "low_block_risk",
         }
+        if source_type in aliases:
+            return aliases[source_type]
 
-        return severity_mapping.get(issue_severity, Severity.LOW)
+        if category:
+            return f"{category}_{source_type}_risk"
+        return f"{source_type}_risk"
 
-    def _extract_affected_elements(self, issue: Dict) -> List[str]:
-        """
-        提取受影响的元素
+    def _calculate_risk_severity(self, level: str) -> Severity:
+        mapping = {
+            "critical": Severity.CRITICAL,
+            "high": Severity.HIGH,
+            "medium": Severity.MEDIUM,
+            "low": Severity.LOW,
+        }
+        return mapping.get(level, Severity.LOW)
 
-        Args:
-            issue: issue字典
-
-        Returns:
-            受影响的元素ID列表
-        """
+    def _extract_affected_elements(self, item: Dict) -> List[str]:
         elements = []
-
-        # 尝试提取各种可能的ID字段
-        for key in ['block_id', 'article_id', 'column_id', 'zone']:
-            if key in issue:
-                elements.append(f"{key}:{issue[key]}")
-
+        for key in ["block_id", "article_id", "column_id", "zone"]:
+            if key in item:
+                elements.append(f"{key}:{item[key]}")
         return elements
 
-    def _generate_impact_description(self, risk_type: str, severity: Severity) -> str:
-        """
-        生成影响说明
-
-        Args:
-            risk_type: 风险类型
-            severity: 风险等级
-
-        Returns:
-            影响说明文本
-        """
-        # 从配置获取描述模板
-        severity_name = severity.name.lower()
-        severity_rule = self.severity_rules.get(severity_name, {})
-
+    def _generate_impact_description(self, severity: Severity) -> str:
+        severity_rule = self.severity_rules.get(severity.name.lower(), {})
         if severity_rule:
-            return severity_rule.get('description', '')
+            return severity_rule.get("description", "")
+        return f"{severity.name.lower()} risk"
 
-        # 默认描述
-        return f"{severity_name}风险"
-
-    def _generate_fix_suggestion(self, issue_type: str, issue: Dict) -> str:
-        """
-        生成修复建议
-
-        Args:
-            issue_type: issue类型
-            issue: issue字典
-
-        Returns:
-            修复建议文本
-        """
-        # 常见issue类型的修复建议
+    def _generate_fix_suggestion(self, issue_type: str) -> str:
         suggestions = {
-            'missing_headline': '检查article聚类逻辑，确保正确识别headline',
-            'too_few_body_blocks': '检查block分类是否正确',
-            'narrow_column': '调整分栏检测参数或合并窄栏',
-            'too_many_columns': '提高gap_threshold或调整分栏策略',
-            'zone_without_headline': '检查该zone的block分类',
-            'empty_block': '检查文本提取是否正确',
+            "missing_headline": "检查article聚类逻辑，确保正确识别headline",
+            "too_few_body_blocks": "检查block分类是否正确",
+            "narrow_column": "调整分栏检测参数或合并窄栏",
+            "too_many_columns": "提高gap_threshold或调整分栏策略",
+            "zone_without_headline": "检查该zone的block分类",
+            "empty_block": "检查文本提取是否正确",
         }
+        return suggestions.get(issue_type, "请人工检查该问题")
 
-        return suggestions.get(issue_type, '请人工检查该问题')
+    def _generate_fix_suggestion_from_anomaly(self, anomaly_type: str) -> str:
+        suggestions = {
+            "article_without_headline": "检查article聚类逻辑",
+            "article_with_single_body_block": "检查block分类是否正确",
+            "oversized_article": "检查是否需要拆分文章",
+            "abnormal_column_count": "调整分栏检测参数",
+            "extremely_narrow_column": "合并窄栏或调整分栏策略",
+            "column_crosses_zones": "使用按zone分栏的模式",
+            "zone_without_headline": "检查该zone的block分类",
+            "classification_mismatch": "检查block分类逻辑",
+            "empty_text_block": "检查文本提取是否正确",
+            "section_label_overfire": "请人工检查该问题",
+        }
+        return suggestions.get(anomaly_type, "请人工检查该异常")
 
     def _is_fixable(self, issue_type: str) -> bool:
-        """
-        判断是否可自动修复
-
-        Args:
-            issue_type: issue类型
-
-        Returns:
-            是否可自动修复
-        """
-        # Phase 1暂不支持自动修复
+        del issue_type
         return False
 
     def _aggregate_risks(self, risks: List[Risk]) -> List[Risk]:
-        """
-        聚合同类型的风险
-
-        Args:
-            risks: 风险列表
-
-        Returns:
-            聚合后的风险列表
-        """
-        if not self.aggregation_rules.get('same_type_aggregation', False):
-            return risks
-
-        # 按类型分组
-        risk_groups = defaultdict(list)
+        risk_groups: Dict[str, List[Risk]] = defaultdict(list)
         for risk in risks:
             risk_groups[risk.type].append(risk)
 
-        # 每种类型最多保留max_risks_per_type个风险
-        max_per_type = self.aggregation_rules.get('max_risks_per_type', 3)
-
-        aggregated_risks = []
-        for risk_type, risk_list in risk_groups.items():
-            # 按severity排序，保留前N个
-            risk_list.sort(key=lambda r: r.severity_score, reverse=True)
+        max_per_type = self.aggregation_rules.get("max_risks_per_type", 3)
+        aggregated_risks: List[Risk] = []
+        for risk_list in risk_groups.values():
+            risk_list.sort(key=lambda risk: risk.severity_score, reverse=True)
             aggregated_risks.extend(risk_list[:max_per_type])
-
         return aggregated_risks
-
-    def _convert_anomalies_to_risks(self, anomalies: Dict[str, List[Dict]]) -> List[Risk]:
-        """
-        将anomalies转化为risks
-
-        Args:
-            anomalies: AnomalyDetector的输出（按类别分组的异常字典）
-
-        Returns:
-            Risk对象列表
-        """
-        risks = []
-
-        # 遍历所有类别的anomalies
-        for category, anomaly_list in anomalies.items():
-            for anomaly in anomaly_list:
-                # 获取异常类型
-                anomaly_type = anomaly.get('type', 'unknown')
-
-                # 映射：anomaly_type → risk_type
-                # 使用与issues相同的映射规则
-                risk_type = self.issue_mappings.get(
-                    anomaly_type,
-                    f'{category}_{anomaly_type}_risk'
-                )
-
-                # 计算风险等级
-                severity = self._calculate_risk_severity_from_anomaly(anomaly)
-
-                # 提取受影响的元素
-                affected_elements = self._extract_affected_elements_from_anomaly(anomaly)
-
-                # 生成影响说明
-                impact = self._generate_impact_description(risk_type, severity)
-
-                # 生成修复建议
-                fix_suggestion = self._generate_fix_suggestion_from_anomaly(anomaly_type, anomaly)
-
-                # 创建Risk对象
-                risk = Risk(
-                    id=f"risk_{len(risks)}",
-                    type=risk_type,
-                    severity=severity,
-                    source='anomaly',
-                    description=anomaly.get('reason', ''),
-                    affected_elements=affected_elements,
-                    impact=impact,
-                    confidence=1.0,
-                    is_fixable=False,
-                    fix_suggestion=fix_suggestion,
-                    source_anomaly=anomaly,
-                    metadata={
-                        'original_anomaly_type': anomaly_type,
-                        'anomaly_category': category,
-                        'anomaly_severity': anomaly.get('severity', 'low'),
-                    }
-                )
-
-                risks.append(risk)
-
-        return risks
-
-    def _calculate_risk_severity_from_anomaly(self, anomaly: Dict) -> Severity:
-        """
-        从anomaly计算风险等级
-
-        Args:
-            anomaly: anomaly字典
-
-        Returns:
-            Severity枚举值
-        """
-        anomaly_severity = anomaly.get('severity', 'low')
-
-        # 映射：anomaly severity → risk severity
-        severity_mapping = {
-            'critical': Severity.CRITICAL,
-            'high': Severity.HIGH,
-            'medium': Severity.MEDIUM,
-            'low': Severity.LOW,
-        }
-
-        return severity_mapping.get(anomaly_severity, Severity.LOW)
-
-    def _extract_affected_elements_from_anomaly(self, anomaly: Dict) -> List[str]:
-        """
-        从anomaly提取受影响的元素
-
-        Args:
-            anomaly: anomaly字典
-
-        Returns:
-            受影响的元素ID列表
-        """
-        elements = []
-
-        # 尝试提取各种可能的ID字段
-        for key in ['block_id', 'article_id', 'column_id', 'zone']:
-            if key in anomaly:
-                elements.append(f"{key}:{anomaly[key]}")
-
-        return elements
-
-    def _generate_fix_suggestion_from_anomaly(self, anomaly_type: str, anomaly: Dict) -> str:
-        """
-        为anomaly生成修复建议
-
-        Args:
-            anomaly_type: anomaly类型
-            anomaly: anomaly字典
-
-        Returns:
-            修复建议文本
-        """
-        # 常见anomaly类型的修复建议
-        suggestions = {
-            'article_without_headline': '检查article聚类逻辑',
-            'article_with_single_body_block': '检查block分类是否正确',
-            'oversized_article': '检查是否需要拆分文章',
-            'abnormal_column_count': '调整分栏检测参数',
-            'extremely_narrow_column': '合并窄栏或调整分栏策略',
-            'column_crosses_zones': '使用按zone分栏的模式',
-            'zone_without_headline': '检查该zone的block分类',
-            'classification_mismatch': '检查block分类逻辑',
-            'empty_text_block': '检查文本提取是否正确',
-        }
-
-        return suggestions.get(anomaly_type, '请人工检查该异常')

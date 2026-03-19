@@ -1,0 +1,11 @@
+safety_evaluation:
+  enabled: true
+  provider: "openai"
+  api_key: ""
+  api_key_env: "ARK_API_KEY"
+  model: "kimi-k2.5"
+  max_articles: 5
+  max_body_chars: 220
+  timeout_seconds: 30
+  temperature: 0.1
+  base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
